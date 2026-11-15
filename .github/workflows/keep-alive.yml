@@ -1,0 +1,34 @@
+name: Keep alive
+
+# Despierta Render (se duerme tras 15 min sin tráfico) y hace una consulta real
+# a Supabase (pausa los proyectos tras ~7 días sin actividad).
+#
+# Ojo: GitHub desactiva los workflows programados si el repo pasa 60 días sin
+# actividad (commits, issues, PRs). Si pasa, hay que reactivarlo desde la pestaña
+# Actions, o correrlo a mano con "Run workflow".
+on:
+  schedule:
+    - cron: "0 12 */3 * *" # cada 3 días, 12:00 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Ping al backend
+        env:
+          STRAPI_URL: ${{ secrets.STRAPI_URL }}
+        run: |
+          if [ -z "$STRAPI_URL" ]; then
+            echo "::error::Falta el secret STRAPI_URL"
+            exit 1
+          fi
+          # Timeout largo por el arranque en frío de Render; reintentos ante 5xx o errores de red.
+          curl --globoff --silent --show-error --fail \
+            --max-time 120 \
+            --retry 5 --retry-delay 30 --retry-all-errors \
+            --output /dev/null --write-out "HTTP %{http_code} en %{time_total}s\n" \
+            "${STRAPI_URL%/}/api/posts?pagination[pageSize]=1"
