@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Valores ficticios: el build no se conecta a la base ni a Supabase.
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "1337"
+      APP_KEYS: ci-key-1,ci-key-2
+      API_TOKEN_SALT: ci-salt
+      ADMIN_JWT_SECRET: ci-secret
+      TRANSFER_TOKEN_SALT: ci-salt
+      JWT_SECRET: ci-secret
+      ENCRYPTION_KEY: ci-key
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: localhost
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: postgres
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: postgres
+      SUPABASE_S3_ENDPOINT: https://example.storage.supabase.co/storage/v1/s3
+      SUPABASE_S3_REGION: sa-east-1
+      SUPABASE_S3_ACCESS_KEY_ID: ci-access-key
+      SUPABASE_S3_SECRET_ACCESS_KEY: ci-secret-key
+      SUPABASE_S3_BUCKET: uploads
+      SUPABASE_PUBLIC_URL: https://example.supabase.co/storage/v1/object/public/uploads
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci --include=dev
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
