@@ -132,6 +132,8 @@ build
 
 ############################
 # Docs (material de estudio personal, no se versiona)
+# Solo se versiona la guía de deploy; el resto de docs/ queda local.
 ############################
 
-/docs
+/docs/*
+!/docs/deploy.md
