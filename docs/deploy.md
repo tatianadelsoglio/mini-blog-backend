@@ -50,11 +50,23 @@ Referencia completa y comentada en `.env.example`.
 | `DATABASE_CLIENT` | `postgres` |
 | `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_NAME`, `DATABASE_USERNAME`, `DATABASE_PASSWORD` | Datos del connection pooler de Supabase |
 | `DATABASE_SSL` | `true` |
-| `DATABASE_SSL_REJECT_UNAUTHORIZED` | `false` |
+| `DATABASE_SSL_REJECT_UNAUTHORIZED` | `true` |
+| `DATABASE_SSL_CA` | Contenido completo del certificado CA de Supabase (ver abajo) |
 | `DATABASE_POOL_MIN` / `DATABASE_POOL_MAX` | `0` / `5` |
 | `SUPABASE_S3_*`, `SUPABASE_PUBLIC_URL` | Ver sección 1 |
 
 `PORT` lo define Render; no hace falta cargarlo.
+
+### Certificado CA de la base (validación SSL)
+
+La conexión a Postgres valida el certificado del servidor (`DATABASE_SSL_REJECT_UNAUTHORIZED=true`), así que Strapi necesita el CA de Supabase.
+
+1. Supabase → **Project Settings → Database → SSL Configuration → Download certificate** (archivo `.crt`).
+2. **En Render:** abrir el `.crt` con un editor de texto, copiar todo (de `-----BEGIN CERTIFICATE-----` a `-----END CERTIFICATE-----`) y pegarlo como valor de `DATABASE_SSL_CA`. El dashboard acepta valores de varias líneas; si el PEM queda en una sola línea con `
+` literales, también funciona.
+3. **En local:** dejar el `.crt` en la raíz del repo (o donde quieras) y apuntar `DATABASE_SSL_CA_FILE` a esa ruta. Los `*.crt` y `*.pem` están en `.gitignore`: el certificado no se sube al repo.
+
+Si falta el CA con la validación activa, Strapi no arranca y el log muestra `SELF_SIGNED_CERT_IN_CHAIN`.
 
 ### Primer deploy
 

@@ -33,6 +33,14 @@ $RECYCLE.BIN/
 
 
 ############################
+# Certificados (CA de la base: se carga por variable de entorno, no se sube)
+############################
+
+*.crt
+*.pem
+
+
+############################
 # Packages
 ############################
 
