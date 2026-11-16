@@ -77,15 +77,20 @@ Si falta el CA con la validación activa, Strapi no arranca y el log muestra `SE
 4. Los permisos públicos (solo `find` y `findOne` en post y category, `find` en about) se configuran solos al arrancar (`src/index.ts`).
    - **Importante:** el bootstrap (`src/index.ts`) restablece esos permisos en **cada arranque**: deja al rol Public solo con `find` y `findOne` en post y category, y `find` en about, y quita cualquier otro permiso del rol sobre esos tres content types (por ejemplo, uno activado a mano en el admin). Para cambiarlos hay que modificar el código, no el admin. Los permisos sobre otros content types y los de otros roles no se tocan. Si el rol Public no existe, el arranque solo deja un aviso en el log y la API responde 403.
 
-### Memoria (512 MB)
+### Memoria
 
-**El build del panel de admin no entra en los 512 MB del plan Free.** Medido en local: con `--max-old-space-size` de 460, 768 y 1024 MB el build falla con `JavaScript heap out of memory`; con 1536 MB pasa (~45 s, pico de ~2 GB de memoria residente). El runtime de Strapi sí entra en 512 MB.
+- **Build:** según la documentación de Render, los builds corren en el pipeline de build de Render, en máquinas aparte de la instancia del servicio (tier Starter del build pipeline, 8 GB de RAM en workspaces Hobby). Los 512 MB del plan Free **no** aplican al build.
+- **Runtime:** los 512 MB del plan Free aplican solo al servicio ya desplegado. Strapi en reposo usa ~164 MB (medido en local, en desarrollo).
 
-Por eso `NODE_OPTIONS=--max-old-space-size=1536` va **solo en el Build Command** (no como variable de entorno, que limitaría el runtime). Eso alcanza en un plan con 2 GB o más; en Free el build se va a quedar sin memoria igual. Opciones:
+El build del panel de admin (Vite) consume bastante: en local necesita más de 1 GB de heap (con `--max-old-space-size` de 460, 768 y 1024 MB falla con `JavaScript heap out of memory`; con 1536 MB pasa en ~45 s, con un pico de ~2 GB de memoria residente). Por eso `NODE_OPTIONS=--max-old-space-size=1536` va **solo en el Build Command**, no como variable de entorno (que limitaría también el runtime).
 
-1. **Plan B (gratis): buildear fuera de Render.** Correr `npm ci --include=dev && npm run build` en GitHub Actions (el runner tiene ~7 GB) o en local, y desplegar el resultado (`dist/` y `build/`) en lugar de compilar en Render. Requiere cambiar el Build Command a algo mínimo (p. ej. `npm ci --omit=dev`) y publicar los artefactos; el admin compilado depende de `PUBLIC_URL`, así que hay que rebuildear si cambia.
-2. Subir temporalmente el plan de Render solo para hacer el deploy y volver a Free (el servicio Free sigue andando con el build ya hecho solo si no se vuelve a compilar).
-3. Pasar a un plan pago.
+**Plan B, solo si el build falla por memoria en Render** (error `Ran out of memory` o `JavaScript heap out of memory` en el log del build): buildear fuera de Render y desplegar el resultado.
+
+1. Correr `npm ci --include=dev && npm run build` en GitHub Actions (el runner tiene ~7 GB) o en local.
+2. Desplegar el resultado (`dist/` y `build/`) en lugar de compilar en Render, con un Build Command mínimo (p. ej. `npm ci --omit=dev`) y publicando los artefactos.
+3. El admin compilado depende de `PUBLIC_URL`: hay que rebuildear si cambia.
+
+Este plan B no está implementado; se documenta únicamente como contingencia.
 
 ## 3. Ping para que no se duerma todo
 

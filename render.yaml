@@ -7,7 +7,7 @@ services:
     plan: free
     region: virginia # la región más cercana al proyecto de Supabase (sa-east-1) que ofrece Render
     # --include=dev: Render setea NODE_ENV=production y Strapi necesita typescript para compilar.
-    # NODE_OPTIONS solo en el build (Vite necesita >1 GB de heap: en el plan Free de 512 MB el build falla, ver docs/deploy.md); el runtime queda sin límite explícito.
+    # NODE_OPTIONS solo en el build (Vite necesita >1 GB de heap; el build corre en el pipeline de Render, no en los 512 MB del runtime, ver docs/deploy.md); el runtime queda sin límite explícito.
     buildCommand: npm ci --include=dev && NODE_OPTIONS=--max-old-space-size=1536 npm run build
     startCommand: npm run start
     healthCheckPath: /_health
