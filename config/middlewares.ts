@@ -25,8 +25,15 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Middlewar
         contentSecurityPolicy: {
           useDefaults: true,
           directives: {
-            'connect-src': ["'self'", 'https:'],
-            'img-src': ["'self'", 'data:', 'blob:', ...supabaseOrigins],
+            // market-assets.strapi.io es parte del default de Strapi: hay que repetirlo porque
+            // img-src reemplaza el array por defecto.
+            'img-src': [
+              "'self'",
+              'data:',
+              'blob:',
+              'https://market-assets.strapi.io',
+              ...supabaseOrigins,
+            ],
             'media-src': ["'self'", 'data:', 'blob:', ...supabaseOrigins],
             upgradeInsecureRequests: null,
           },
