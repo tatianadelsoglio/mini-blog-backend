@@ -69,7 +69,9 @@ Si falta el CA con la validación activa, Strapi no arranca y el log muestra `SE
 
 ### Primer deploy
 
-1. Deploy inicial (puede fallar el admin hasta cargar `PUBLIC_URL`; cargarla y redeployar).
+1. **Orden de `PUBLIC_URL`:** la URL del servicio solo se conoce al crearlo y el panel de admin la incorpora en el build. Dos caminos:
+   - Si el nombre `mini-blog-backend` está libre, la URL va a ser `https://mini-blog-backend.onrender.com` y se puede cargar `PUBLIC_URL` ya en el Blueprint.
+   - Si no (Render agrega un sufijo al nombre), dejar `PUBLIC_URL` vacía, hacer el primer deploy, copiar la URL que muestra Render, cargarla en `PUBLIC_URL` y volver a deployar (**Manual Deploy → Clear build cache & deploy**) para que el admin se rebuildee con la URL correcta. Sin `PUBLIC_URL`, el admin y los links absolutos pueden apuntar a una dirección incorrecta.
 2. Abrir `https://<servicio>.onrender.com/admin` y crear el primer usuario administrador (solo si la base es nueva).
 3. Crear la página **About** y publicarla (single type, hasta publicarla la API responde 404).
 4. Los permisos públicos (solo `find` y `findOne` en post y category, `find` en about) se configuran solos al arrancar (`src/index.ts`).
@@ -84,6 +86,22 @@ El tope de heap hace que el recolector de basura sea más agresivo, pero no limi
 2. Subir temporalmente el plan de Render solo para hacer el deploy y volver a Free.
 3. Pasar a un plan pago.
 
+### CORS para el dominio del frontend
+
+`strapi::cors` queda con la configuración por defecto de Strapi, que acepta cualquier origen. Mientras el frontend (Next.js) consuma la API desde el servidor no hace falta tocar nada. Si algún día el navegador llama directo a la API y querés restringirlo al dominio del frontend, reemplazar `'strapi::cors'` en `config/middlewares.ts` por:
+
+```ts
+{
+  name: 'strapi::cors',
+  config: {
+    origin: ['https://<frontend>'], // o una variable de entorno con la lista de dominios
+    methods: ['GET', 'HEAD', 'OPTIONS'],
+  },
+},
+```
+
+Si se restringe, incluir también el origen del propio backend (`PUBLIC_URL`) para que el admin siga funcionando.
+
 ## 3. Ping para que no se duerma todo
 
 Workflow `.github/workflows/keep-alive.yml`: corre cada 3 días y a mano (**Actions → Keep alive → Run workflow**). Hace `GET <STRAPI_URL>/api/posts?pagination[pageSize]=1`, que despierta Render y hace una consulta real a Supabase (Supabase pausa los proyectos tras ~7 días sin actividad).
@@ -93,6 +111,12 @@ Workflow `.github/workflows/keep-alive.yml`: corre cada 3 días y a mano (**Acti
 3. Correr el workflow a mano una vez para verificar que da `HTTP 200`.
 
 **Importante:** GitHub desactiva los workflows programados si el repositorio pasa **60 días sin actividad**. Si pasa, aparece un aviso en la pestaña Actions y hay que reactivarlo desde ahí (o hacer un commit). Un push cada tanto alcanza para evitarlo.
+
+**Si cambia la URL del backend (`STRAPI_URL`):**
+
+1. Actualizar el secret `STRAPI_URL` en GitHub (Settings → Secrets and variables → Actions) y correr el workflow a mano para comprobarlo.
+2. Actualizar `PUBLIC_URL` en Render y redeployar (el admin se rebuildea con la URL nueva).
+3. Actualizar la variable del frontend que apunta a la API y redeployar el frontend.
 
 ## 4. Webhook de revalidación hacia el frontend
 
