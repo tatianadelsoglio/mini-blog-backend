@@ -29,7 +29,7 @@ Backend Strapi 5 en **Render** (plan Free), base Postgres y archivos en **Supaba
 |---|---|
 | Runtime | Node |
 | Plan | Free |
-| Build Command | `npm ci --include=dev && npm run build` |
+| Build Command | `npm ci --include=dev && NODE_OPTIONS=--max-old-space-size=460 npm run build` |
 | Start Command | `npm run start` |
 | Health Check Path | `/_health` |
 | Node | 22 (se toma de `.nvmrc`) |
@@ -43,7 +43,6 @@ Referencia completa y comentada en `.env.example`.
 | Variable | Valor en Render |
 |---|---|
 | `NODE_ENV` | `production` |
-| `NODE_OPTIONS` | `--max-old-space-size=400` (ver "Memoria") |
 | `IS_PROXIED` | `true` |
 | `PUBLIC_URL` | `https://<tu-servicio>.onrender.com` (después del primer deploy, cuando se conoce la URL) |
 | `APP_KEYS`, `API_TOKEN_SALT`, `ADMIN_JWT_SECRET`, `TRANSFER_TOKEN_SALT`, `JWT_SECRET`, `ENCRYPTION_KEY` | Generados por el Blueprint. Si reusás una base existente, copiá los de tu `.env` local (cambiar `API_TOKEN_SALT` invalida los API tokens ya creados) |
@@ -77,11 +76,13 @@ Si falta el CA con la validación activa, Strapi no arranca y el log muestra `SE
 
 ### Memoria (512 MB)
 
-El build del panel de admin (Vite) puede superar los 512 MB: en una medición local el proceso de build llegó a ~2 GB de memoria residente. `NODE_OPTIONS=--max-old-space-size=400` hace que el recolector de basura sea más agresivo y suele alcanzar, pero no está garantizado en el plan Free. Si el build falla con "Ran out of memory" o `JavaScript heap out of memory`:
+El build del panel de admin (Vite) es lo que más memoria consume: en una medición local el proceso de build llegó a ~2 GB de memoria residente, y el plan Free de Render tiene 512 MB. Por eso `NODE_OPTIONS=--max-old-space-size=460` va **solo en el Build Command** (mejor que como variable de entorno, que también limitaría el runtime). El runtime de Strapi entra en 512 MB sin ese límite.
 
-- Probar subir/bajar el valor de `--max-old-space-size` (p. ej. 450).
-- Hacer el build en un plan con más memoria y volver a Free (el build es lo que consume; el runtime entra en 512 MB).
-- Como último recurso, pasar a un plan pago.
+El tope de heap hace que el recolector de basura sea más agresivo, pero no limita la memoria nativa de Vite/esbuild, así que **no está garantizado** que el build pase. Si falla con "Ran out of memory" o `JavaScript heap out of memory`:
+
+1. **Plan B (gratis): buildear fuera de Render.** Correr `npm ci --include=dev && npm run build` en GitHub Actions o en local, y desplegar el resultado (`dist/` y `build/`) en lugar de compilar en Render. Requiere cambiar el Build Command a algo mínimo (p. ej. `npm ci --omit=dev`) y versionar o publicar los artefactos; el admin compilado depende de `PUBLIC_URL`.
+2. Subir temporalmente el plan de Render solo para hacer el deploy y volver a Free.
+3. Pasar a un plan pago.
 
 ## 3. Ping para que no se duerma todo
 

@@ -7,7 +7,8 @@ services:
     plan: free
     region: virginia # la región más cercana al proyecto de Supabase (sa-east-1) que ofrece Render
     # --include=dev: Render setea NODE_ENV=production y Strapi necesita typescript para compilar.
-    buildCommand: npm ci --include=dev && npm run build
+    # NODE_OPTIONS solo en el build (heap más amplio para Vite); el runtime queda sin límite explícito.
+    buildCommand: npm ci --include=dev && NODE_OPTIONS=--max-old-space-size=460 npm run build
     startCommand: npm run start
     healthCheckPath: /_health
     autoDeploy: true
@@ -15,8 +16,6 @@ services:
       # La versión de Node sale de .nvmrc (22).
       - key: NODE_ENV
         value: production
-      - key: NODE_OPTIONS
-        value: --max-old-space-size=400
       - key: IS_PROXIED
         value: "true"
       - key: PUBLIC_URL
