@@ -22,10 +22,28 @@ const deniedExecutableTypes = [
   'application/x-mach-binary',
 ];
 
+const requiredS3Variables = [
+  'SUPABASE_S3_ENDPOINT',
+  'SUPABASE_S3_REGION',
+  'SUPABASE_S3_ACCESS_KEY_ID',
+  'SUPABASE_S3_SECRET_ACCESS_KEY',
+  'SUPABASE_S3_BUCKET',
+  'SUPABASE_PUBLIC_URL',
+];
+
 const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin => {
   // En producción siempre S3 (el disco de Render es efímero). En desarrollo se usa el
   // proveedor local salvo que se pida explícitamente UPLOAD_PROVIDER=s3.
   const useS3 = env('NODE_ENV') === 'production' || env('UPLOAD_PROVIDER') === 's3';
+
+  if (useS3) {
+    const missing = requiredS3Variables.filter((name) => !env(name));
+    if (missing.length > 0) {
+      throw new Error(
+        `Faltan variables de entorno para Supabase Storage: ${missing.join(', ')}. Ver .env.example.`
+      );
+    }
+  }
 
   return {
     'users-permissions': {
