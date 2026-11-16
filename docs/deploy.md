@@ -29,7 +29,7 @@ Backend Strapi 5 en **Render** (plan Free), base Postgres y archivos en **Supaba
 |---|---|
 | Runtime | Node |
 | Plan | Free |
-| Build Command | `npm ci --include=dev && NODE_OPTIONS=--max-old-space-size=460 npm run build` |
+| Build Command | `npm ci --include=dev && NODE_OPTIONS=--max-old-space-size=1536 npm run build` |
 | Start Command | `npm run start` |
 | Health Check Path | `/_health` |
 | Node | 22 (se toma de `.nvmrc`) |
@@ -79,29 +79,13 @@ Si falta el CA con la validación activa, Strapi no arranca y el log muestra `SE
 
 ### Memoria (512 MB)
 
-El build del panel de admin (Vite) es lo que más memoria consume: en una medición local el proceso de build llegó a ~2 GB de memoria residente, y el plan Free de Render tiene 512 MB. Por eso `NODE_OPTIONS=--max-old-space-size=460` va **solo en el Build Command** (mejor que como variable de entorno, que también limitaría el runtime). El runtime de Strapi entra en 512 MB sin ese límite.
+**El build del panel de admin no entra en los 512 MB del plan Free.** Medido en local: con `--max-old-space-size` de 460, 768 y 1024 MB el build falla con `JavaScript heap out of memory`; con 1536 MB pasa (~45 s, pico de ~2 GB de memoria residente). El runtime de Strapi sí entra en 512 MB.
 
-El tope de heap hace que el recolector de basura sea más agresivo, pero no limita la memoria nativa de Vite/esbuild, así que **no está garantizado** que el build pase. Si falla con "Ran out of memory" o `JavaScript heap out of memory`:
+Por eso `NODE_OPTIONS=--max-old-space-size=1536` va **solo en el Build Command** (no como variable de entorno, que limitaría el runtime). Eso alcanza en un plan con 2 GB o más; en Free el build se va a quedar sin memoria igual. Opciones:
 
-1. **Plan B (gratis): buildear fuera de Render.** Correr `npm ci --include=dev && npm run build` en GitHub Actions o en local, y desplegar el resultado (`dist/` y `build/`) en lugar de compilar en Render. Requiere cambiar el Build Command a algo mínimo (p. ej. `npm ci --omit=dev`) y versionar o publicar los artefactos; el admin compilado depende de `PUBLIC_URL`.
-2. Subir temporalmente el plan de Render solo para hacer el deploy y volver a Free.
+1. **Plan B (gratis): buildear fuera de Render.** Correr `npm ci --include=dev && npm run build` en GitHub Actions (el runner tiene ~7 GB) o en local, y desplegar el resultado (`dist/` y `build/`) en lugar de compilar en Render. Requiere cambiar el Build Command a algo mínimo (p. ej. `npm ci --omit=dev`) y publicar los artefactos; el admin compilado depende de `PUBLIC_URL`, así que hay que rebuildear si cambia.
+2. Subir temporalmente el plan de Render solo para hacer el deploy y volver a Free (el servicio Free sigue andando con el build ya hecho solo si no se vuelve a compilar).
 3. Pasar a un plan pago.
-
-### CORS para el dominio del frontend
-
-`strapi::cors` queda con la configuración por defecto de Strapi, que acepta cualquier origen. Mientras el frontend (Next.js) consuma la API desde el servidor no hace falta tocar nada. Si algún día el navegador llama directo a la API y querés restringirlo al dominio del frontend, reemplazar `'strapi::cors'` en `config/middlewares.ts` por:
-
-```ts
-{
-  name: 'strapi::cors',
-  config: {
-    origin: ['https://<frontend>'], // o una variable de entorno con la lista de dominios
-    methods: ['GET', 'HEAD', 'OPTIONS'],
-  },
-},
-```
-
-Si se restringe, incluir también el origen del propio backend (`PUBLIC_URL`) para que el admin siga funcionando.
 
 ## 3. Ping para que no se duerma todo
 
