@@ -75,6 +75,7 @@ Si falta el CA con la validación activa, Strapi no arranca y el log muestra `SE
 2. Abrir `https://<servicio>.onrender.com/admin` y crear el primer usuario administrador (solo si la base es nueva).
 3. Crear la página **About** y publicarla (single type, hasta publicarla la API responde 404).
 4. Los permisos públicos (solo `find` y `findOne` en post y category, `find` en about) se configuran solos al arrancar (`src/index.ts`).
+   - **Importante:** el bootstrap (`src/index.ts`) restablece esos permisos en **cada arranque**: deja al rol Public solo con `find` y `findOne` en post y category, y `find` en about, y quita cualquier otro permiso del rol sobre esos tres content types (por ejemplo, uno activado a mano en el admin). Para cambiarlos hay que modificar el código, no el admin. Los permisos sobre otros content types y los de otros roles no se tocan. Si el rol Public no existe, el arranque solo deja un aviso en el log y la API responde 403.
 
 ### Memoria (512 MB)
 
