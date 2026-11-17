@@ -2,7 +2,7 @@
 
 # Cuaderno · Backend
 
-The headless CMS behind [Cuaderno](https://mini-blog-frontend-rouge.vercel.app): a Strapi 5 API on Render's free plan. It uses Postgres and file storage on Supabase, a webhook that tells the frontend when content changes, and a GitHub Actions keep-alive so nothing stays asleep for long.
+The headless CMS behind [Cuaderno](https://mini-blog-frontend-rouge.vercel.app): a Strapi 5 API on Render's free plan. It uses Postgres and file storage on Supabase, a webhook that tells the frontend when content changes, and a GitHub Actions keep-alive that stops Supabase from pausing the project for inactivity.
 
 [**Live site**](https://mini-blog-frontend-rouge.vercel.app) · [Frontend repository](https://github.com/tatianadelsoglio/mini-blog-frontend) · [![CI](https://github.com/tatianadelsoglio/mini-blog-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/tatianadelsoglio/mini-blog-backend/actions/workflows/ci.yml)
 
@@ -53,7 +53,7 @@ Strapi stores webhooks in the database, so this one is created once per database
 
 ## Keep-alive and CI
 
-**Keep-alive** ([`.github/workflows/keep-alive.yml`](.github/workflows/keep-alive.yml)): about every 3 days (it is scheduled by day of the month, so the gap is 1 to 3 days; it can also run on demand from the Actions tab) it requests `/api/posts?pagination[pageSize]=1`. That wakes Render and runs a real query against Supabase, and Supabase's free plan pauses inactive projects after about a week. It uses a long timeout for the cold start and retries up to 5 times, 30 seconds apart, on any failure. The backend URL lives in the `STRAPI_URL` repository secret. GitHub disables scheduled workflows after 60 days without repository activity, so it has to be re-enabled from the Actions tab if that happens.
+**Keep-alive** ([`.github/workflows/keep-alive.yml`](.github/workflows/keep-alive.yml)): about every 3 days (it is scheduled by day of the month, so the gap is 1 to 3 days; it can also run on demand from the Actions tab) it requests `/api/posts?pagination[pageSize]=1`. That wakes Render for that request (it still sleeps again after 15 minutes) and, more importantly, runs a real query against Supabase, and Supabase's free plan pauses inactive projects after about a week. It uses a long timeout for the cold start and retries up to 5 times, 30 seconds apart, on any failure. The backend URL lives in the `STRAPI_URL` repository secret. GitHub disables scheduled workflows after 60 days without repository activity, so it has to be re-enabled from the Actions tab if that happens.
 
 **CI** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): on every push and pull request to `main`, it installs dependencies, runs the type check and runs the production build (`strapi build`, which compiles the admin panel). The build uses placeholder environment variables and does not connect to the database or to Supabase.
 
@@ -64,7 +64,7 @@ The full guide, with the exact values, is in [`docs/deploy.md`](docs/deploy.md).
 1. **Supabase:** create a public bucket named `uploads`, generate S3 access keys, and note the endpoint, region and the bucket's public URL.
 2. **Render:** create a Blueprint from this repository so it reads `render.yaml`, then fill in the variables marked `sync: false`.
 3. **Database certificate:** download the Supabase CA and paste its full PEM into `DATABASE_SSL_CA`.
-4. **First deploy:** set `PUBLIC_URL` to the service URL If the URL is only known after the service is created, deploy once, set it, then redeploy with a cleared build cache so the admin is rebuilt with it.
+4. **First deploy:** set `PUBLIC_URL` to the service URL. If the URL is only known after the service is created, deploy once, set it, then redeploy with a cleared build cache so the admin is rebuilt with it.
 5. **Admin:** create the first administrator, then create and publish the About page (until then `/api/about` answers 404).
 6. **Webhook:** create it as described above.
 7. **Keep-alive:** add the `STRAPI_URL` repository secret and run the workflow once by hand to check for `HTTP 200`.
@@ -108,7 +108,7 @@ Annotated reference in [`.env.example`](.env.example); the values there are plac
 
 ## Limitations
 
-- **Render's free plan:** the service sleeps after 15 minutes without traffic and takes about a minute to wake up; it has 512 MB of RAM and an ephemeral disk. The frontend is built so readers never wait for this, but I do when I open the admin after a quiet period.
+- **Render's free plan:** the service sleeps after 15 minutes without traffic and takes about a minute to wake up; it has 512 MB of RAM and an ephemeral disk. The frontend is built so readers almost never wait for this, but I do when I open the admin after a quiet period.
 - **Build memory:** the admin build needs a larger heap than the runtime has. It works because Render builds outside the runtime instance; a fallback plan (build in GitHub Actions and deploy the output) is described in [`docs/deploy.md`](docs/deploy.md) but is not implemented.
 - **Manual setup per database:** the webhook is stored in the database, so a new database needs it created again.
 - **Scheduled workflow:** the keep-alive stops after 60 days without repository activity until it is re-enabled.
@@ -117,5 +117,5 @@ Annotated reference in [`.env.example`](.env.example); the values there are plac
 
 ## Author
 
-Designed and developed by **Tatiana Delsoglio** · TAMADE, fullstack developer.
+Designed and developed by **Tatiana Delsoglio**, fullstack developer · TAMADE
 [GitHub](https://github.com/tatianadelsoglio) · [LinkedIn](https://www.linkedin.com/in/tatiana-delsoglio/)

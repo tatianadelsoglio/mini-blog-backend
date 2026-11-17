@@ -2,7 +2,7 @@
 
 # Cuaderno · Backend
 
-El CMS headless detrás de [Cuaderno](https://mini-blog-frontend-rouge.vercel.app): una API de Strapi 5 en el plan gratuito de Render. Usa Postgres y almacenamiento de archivos en Supabase, un webhook que avisa al frontend cuando cambia el contenido y un keep-alive con GitHub Actions para que nada pase mucho tiempo dormido.
+El CMS headless detrás de [Cuaderno](https://mini-blog-frontend-rouge.vercel.app): una API de Strapi 5 en el plan gratuito de Render. Usa Postgres y almacenamiento de archivos en Supabase, un webhook que avisa al frontend cuando cambia el contenido y un keep-alive con GitHub Actions que evita que Supabase pause el proyecto por inactividad.
 
 [**Sitio en vivo**](https://mini-blog-frontend-rouge.vercel.app) · [Repositorio del frontend](https://github.com/tatianadelsoglio/mini-blog-frontend) · [![CI](https://github.com/tatianadelsoglio/mini-blog-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/tatianadelsoglio/mini-blog-backend/actions/workflows/ci.yml)
 
@@ -53,7 +53,7 @@ Strapi guarda los webhooks en la base de datos, así que este se crea una vez po
 
 ## Keep-alive y CI
 
-**Keep-alive** ([`.github/workflows/keep-alive.yml`](.github/workflows/keep-alive.yml)): cada 3 días aproximadamente (se programa por día del mes, así que el intervalo real es de 1 a 3 días; también puede correr a pedido desde la pestaña Actions) consulta `/api/posts?pagination[pageSize]=1`. Eso despierta a Render y hace una consulta real a Supabase, y el plan gratuito de Supabase pausa los proyectos inactivos tras alrededor de una semana. Usa un timeout largo por el arranque en frío y reintenta hasta 5 veces, con 30 segundos de espera, ante cualquier falla. La URL del backend está en el secret de repositorio `STRAPI_URL`. GitHub desactiva los workflows programados si el repositorio pasa 60 días sin actividad, así que hay que reactivarlo desde la pestaña Actions si eso pasa.
+**Keep-alive** ([`.github/workflows/keep-alive.yml`](.github/workflows/keep-alive.yml)): cada 3 días aproximadamente (se programa por día del mes, así que el intervalo real es de 1 a 3 días; también puede correr a pedido desde la pestaña Actions) consulta `/api/posts?pagination[pageSize]=1`. Eso despierta a Render durante ese pedido (se vuelve a dormir a los 15 minutos) y, sobre todo, hace una consulta real a Supabase, y el plan gratuito de Supabase pausa los proyectos inactivos tras alrededor de una semana. Usa un timeout largo por el arranque en frío y reintenta hasta 5 veces, con 30 segundos de espera, ante cualquier falla. La URL del backend está en el secret de repositorio `STRAPI_URL`. GitHub desactiva los workflows programados si el repositorio pasa 60 días sin actividad, así que hay que reactivarlo desde la pestaña Actions si eso pasa.
 
 **CI** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): en cada push y pull request a `main` instala las dependencias, corre el typecheck y el build de producción (`strapi build`, que compila el panel de admin). El build usa variables de entorno de relleno y no se conecta a la base ni a Supabase.
 
@@ -64,7 +64,7 @@ La guía completa, con los valores exactos, está en [`docs/deploy.md`](docs/dep
 1. **Supabase:** crear un bucket público llamado `uploads`, generar las access keys de S3 y anotar el endpoint, la región y la URL pública del bucket.
 2. **Render:** crear un Blueprint desde este repositorio para que lea `render.yaml` y completar las variables marcadas `sync: false`.
 3. **Certificado de la base:** descargar el CA de Supabase y pegar el PEM completo en `DATABASE_SSL_CA`.
-4. **Primer deploy:** cargar `PUBLIC_URL` con la URL del servicio Si esa URL recién se conoce al crear el servicio, desplegar una vez, cargarla y volver a desplegar limpiando la caché de build para que el admin se reconstruya con ella.
+4. **Primer deploy:** cargar `PUBLIC_URL` con la URL del servicio. Si esa URL recién se conoce al crear el servicio, desplegar una vez, cargarla y volver a desplegar limpiando la caché de build para que el admin se reconstruya con ella.
 5. **Admin:** crear el primer administrador y después crear y publicar la página About (hasta entonces `/api/about` responde 404).
 6. **Webhook:** crearlo como se describe arriba.
 7. **Keep-alive:** agregar el secret de repositorio `STRAPI_URL` y correr el workflow una vez a mano para comprobar que da `HTTP 200`.
@@ -108,7 +108,7 @@ Referencia comentada en [`.env.example`](.env.example); los valores de ese archi
 
 ## Limitaciones
 
-- **Plan gratuito de Render:** el servicio se duerme tras 15 minutos sin tráfico y tarda alrededor de un minuto en despertar; tiene 512 MB de RAM y disco efímero. El frontend está pensado para que los lectores nunca esperen por esto, pero yo sí espero cuando abro el admin después de un rato sin uso.
+- **Plan gratuito de Render:** el servicio se duerme tras 15 minutos sin tráfico y tarda alrededor de un minuto en despertar; tiene 512 MB de RAM y disco efímero. El frontend está pensado para que los lectores casi nunca esperen por esto, pero yo sí espero cuando abro el admin después de un rato sin uso.
 - **Memoria del build:** el build del admin necesita más heap del que tiene el runtime. Funciona porque Render buildea fuera de la instancia del runtime; un plan alternativo (buildear en GitHub Actions y desplegar el resultado) está descrito en [`docs/deploy.md`](docs/deploy.md) pero no está implementado.
 - **Configuración manual por base:** el webhook se guarda en la base de datos, así que una base nueva requiere crearlo de nuevo.
 - **Workflow programado:** el keep-alive se detiene tras 60 días sin actividad en el repositorio hasta que se lo reactiva.
@@ -117,5 +117,5 @@ Referencia comentada en [`.env.example`](.env.example); los valores de ese archi
 
 ## Autora
 
-Diseño y desarrollo: **Tatiana Delsoglio** · TAMADE, desarrolladora fullstack.
+Diseño y desarrollo: **Tatiana Delsoglio**, desarrolladora fullstack · TAMADE
 [GitHub](https://github.com/tatianadelsoglio) · [LinkedIn](https://www.linkedin.com/in/tatiana-delsoglio/)
